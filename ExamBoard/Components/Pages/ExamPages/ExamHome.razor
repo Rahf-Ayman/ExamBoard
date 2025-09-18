@@ -1,0 +1,178 @@
+﻿@page "/exams"
+
+@inject NavigationManager Navigation
+
+<PageTitle>Exam</PageTitle>
+
+@if (!isSelected)
+{
+
+    <div class="login-container">
+        <h3 class="login-title">Login</h3>
+
+        @if (!string.IsNullOrEmpty(FlashMessage))
+        {
+            <div class="alert @FlashMessagecss" role="alert">
+                @FlashMessage
+            </div>
+        }
+
+        <EditForm Model="student" OnValidSubmit="Submit">
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText class="form-control" id="email" aria-describedby="emailHelp" @bind-Value="student.Email" type="email" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText class="form-control" id="password" aria-describedby="emailHelp" placeholder="" @bind-Value="student.Password" type="password" />
+            </div>
+
+            <button type="submit" class="btn btn-login">Submit</button>
+        </EditForm>
+
+        <h5 class="signup-text">Don't have an account? <a href="/register">Sign Up</a></h5>
+    </div>
+}
+else
+{
+
+    <ExamNav page="exams" pageName="Exam" StudentId="@(student.Id)" />
+    <div class="student-info">
+        <h3>Student Name: @student.Name</h3>
+        <h3>Student Age: @student.Age</h3>
+        <a class="btn btn-primary mt-2" href="@($"/students/{student.Id}/edit")">
+            <i class="bi bi-pencil-square"></i> Update Profile
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(FlashMessage))
+    {
+        <div class="alert @FlashMessagecss" role="alert">
+            @FlashMessage
+        </div>
+    }
+
+    <div class="exam-page">
+        @if (exams.Count == 0)
+        {
+            <h4 class="no-exam">No Exam is found.</h4>
+        }
+        else
+        {
+            <div class="page-card">
+                <table class="table exam-table">
+                    <thead>
+                        <tr>
+                            <th>Exam Id</th>
+                            <th>Score</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var exam in exams)
+                        {
+                            <tr>
+                                <td>@exam.Id</td>
+                                <td>@(exam.isCompleted ? $"{exam.Score} / {exam.NumberOfQuestions}" : "Not Taken")</td>
+                                <td>
+                                    @if (exam.isCompleted)
+                                    {
+                                        <a class="btn btn-view" href="@($"/exams/{exam.Id}/result")">
+                                            <i class="bi bi-eye"></i> Show Result
+                                        </a>
+                                    }
+                                    <a class="btn btn-take" href="@($"/exams/{exam.Id}")">
+                                        <i class="bi bi-pencil"></i> Take
+                                    </a>
+                                    <button class="btn btn-delete" onclick="@(() => Delete(exam))">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    
+}
+
+
+
+@code {
+    private bool isSelected = false;
+
+    private Student student = new ();
+
+    [SupplyParameterFromQuery]
+    public int StudentId { get; set; }
+
+    private string FlashMessage;
+    private string FlashMessagecss;
+
+    private List<Exam> exams = new();
+
+    protected override void OnInitialized()
+    {
+        if (StudentId > 0)
+        {
+            var _dbContext = new ExamBoardContext();
+            var existingStudent = _dbContext.Students.FirstOrDefault(s => s.Id == StudentId);
+            if (existingStudent != null)
+            {
+                student = existingStudent;
+                ShowExams();
+            }
+        }
+    }
+
+    private void Submit()
+    {
+        var _dbContext = new ExamBoardContext();
+        var existingStudent = _dbContext.Students.FirstOrDefault(s => s.Email == student.Email && s.Password == student.Password);
+        if (existingStudent == null)
+        {
+            FlashMessage = "The Password or Email not Valid";
+            FlashMessagecss = "alert-danger";
+            return;
+        }
+        student = existingStudent;
+
+        ShowExams();
+    }
+
+    private void ShowExams()
+    {
+        isSelected = true;
+        var _dbContext = new ExamBoardContext();
+        exams = _dbContext.Exams
+            .Where(e => e.StudentId == student.Id)
+            .Include(e => e.Student)
+            .ToList();
+
+        if(exams == null)
+        {
+            exams = new List<Exam>();
+            FlashMessage = "No Student with this Id";
+            FlashMessagecss = "alert-danger";
+        }
+        StateHasChanged();
+    }
+
+    private async Task Delete(Exam exam)
+    {
+        var _dbContext = new ExamBoardContext();
+        var existingExam = _dbContext.Exams
+            .Where(e => e.Id == exam.Id)
+            .Include(e => e.examQuestions)
+            .FirstOrDefault();
+            if (existingExam == null) return;
+            exams.Remove(exam);
+        _dbContext.Exams.Remove(existingExam);
+        await _dbContext.SaveChangesAsync();
+        StateHasChanged();
+    }
+}

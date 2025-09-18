@@ -1,0 +1,24 @@
+﻿@inject NavigationManager Navigation
+
+<nav class="nav nav-pills mb-3">
+    <a class="nav-link @(IsActive($"/{page}") ? "active" : "")" href="/@(page)">
+        Home
+    </a>
+    <a class="nav-link @(IsActive($"/{page}/add") ? "active" : "")" href="/@(page)/add">
+        Add @pageName
+    </a>
+</nav>
+
+@code {
+
+    [Parameter]
+    public string page { get; set; } = string.Empty;
+
+    [Parameter]
+    public string pageName { get; set; } = string.Empty;
+
+    private bool IsActive(string url)
+    {
+        return Navigation.Uri.EndsWith(url, StringComparison.OrdinalIgnoreCase);
+    }
+}

@@ -1,0 +1,93 @@
+﻿@page "/questions"
+
+<PageTitle>Questions</PageTitle>
+
+<CustomNavbar page="questions" pageName="Question" />
+
+@if (isInitalized)
+
+{
+    <div class="question-page">
+        <h3 class="page-title">Question Home</h3>
+
+        @if (Questions.Count == 0)
+        {
+            <h4 class="no-exam">No Question is found.</h4>
+        }
+        else
+        {
+            <div class="page-card">
+                <table class="table question-table">
+                    <thead>
+                        <tr>
+                            <th>Question Id</th>
+                            <th>Text</th>
+                            <th>Answer</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var Question in Questions)
+                        {
+                            <tr>
+                                <td>@Question.Id</td>
+                                <td>@Question.Text</td>
+                                <td>@Question.Choices.FirstOrDefault(c => c.IsCorrect == true).Text</td>
+                                <td>
+                                    <a class="btn btn-edit" href="@($"/questions/edit/{Question.Id}")">
+                                        <i class="bi bi-pencil-square"></i> Edit
+                                    </a>
+                                    <button class="btn btn-delete" onclick="@(() => Delete(Question))">
+                                        <i class="bi bi-trash"></i> Delete
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+}
+else
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+
+
+
+
+@code {
+    private List<Question> Questions = new();
+
+    private bool isInitalized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+        Questions = await _dbContext.Questions.ToListAsync();
+        isInitalized = true ;
+    }
+
+    private async Task Delete(Question question)
+    {
+        var _dbContext = new ExamBoardContext();
+
+        // Load the entity from DB to ensure it's tracked
+        var questionInDb = await _dbContext.Questions.FindAsync(question.Id);
+        if (questionInDb != null)
+        {
+            _dbContext.Database.ExecuteSqlRawAsync(
+            "DELETE FROM Questions WHERE Id = {0}", question.Id); 
+            await _dbContext.SaveChangesAsync();
+
+            // Remove from local list so UI updates
+            Questions.Remove(question);
+        }
+        StateHasChanged();
+    }
+}

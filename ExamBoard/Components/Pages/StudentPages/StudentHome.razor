@@ -1,0 +1,79 @@
+﻿@page "/students"
+
+<PageTitle>Studnets</PageTitle>
+
+@if (isInitalized)
+{
+    <div class="student-page">
+        <h3>Students</h3>
+        @if (students.Count == 0)
+        {
+            <h4>No student is found.</h4>
+        }
+        else
+        {
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th scope="col">Student Id</th>
+                        <th scope="col">Email</th>
+                        <th scope="col">Age</th>
+                        <th scope="col">Gender</th>
+                        <th scope="col">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var student in students)
+                    {
+                        <tr>
+                            <td>@student.Id</td>
+                            <td>@student.Email</td>
+                            <td>@student.Age</td>
+                            <td>@(student.gender == Gender.Male ? "Male" : "Female")</td>
+                            <td>
+                                <button class="btn btn-secondary" onclick="@(() => Delete(student))">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+
+}
+else
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+
+@code {
+    private List<Student> students = new();
+    private bool isInitalized = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+
+        students = await _dbContext.Students.ToListAsync();
+        isInitalized = true;
+    }
+
+    private async Task Delete(Student student)
+    {
+        isInitalized = false;
+        var _dbContext = new ExamBoardContext();
+        var ExistStudnet = await _dbContext.Students.FindAsync(student.Id);
+
+        if (ExistStudnet != null)
+        {
+            students.Remove(student);
+            _dbContext.Students.Remove(ExistStudnet);
+            await _dbContext.SaveChangesAsync();
+        }
+        isInitalized = true;
+        StateHasChanged();
+    }
+}

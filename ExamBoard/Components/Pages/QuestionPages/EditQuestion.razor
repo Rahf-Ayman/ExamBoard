@@ -1,0 +1,113 @@
+﻿@page "/questions/edit/{QuestionId:int}"
+
+@inject NavigationManager NavigationManager;
+
+<PageTitle>Edit Questions</PageTitle>
+
+@if (!IsInitialized)
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+else
+{
+    <h3>Edit Question</h3>
+
+    <EditForm Model="question" OnValidSubmit="Edit" class="edit-form">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label for="text" class="form-label">Question</label>
+            <InputTextArea class="form-control" id="text" placeholder="Enter your question..." @bind-Value="question.Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice1" class="form-label">Choice 1</label>
+            <InputText class="form-control" id="choice1" @bind-Value="question.Choices[0].Text" />
+            <ValidationMessage For="@(() => question.Text)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice2" class="form-label">Choice 2</label>
+            <InputText class="form-control" id="choice2" @bind-Value="question.Choices[1].Text" />
+            <ValidationMessage For="@(() => question.Text)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice3" class="form-label">Choice 3</label>
+            <InputText class="form-control" id="choice3" @bind-Value="question.Choices[2].Text" />
+            <ValidationMessage For="@(() => question.Text)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice4" class="form-label">Choice 4</label>
+            <InputText class="form-control" id="choice4" @bind-Value="question.Choices[3].Text" />
+            <ValidationMessage For="@(() => question.Text)" />
+        </div>
+
+        <div class="mb-3">
+            <label for="select" class="form-label">The Correct Choice</label>
+            <InputSelect class="form-select form-select-sm" id="select" @bind-Value="SelectedChoiceId">
+                <option value="@(question.Choices[0].Id)">Choice 1</option>
+                <option value="@(question.Choices[1].Id)">Choice 2</option>
+                <option value="@(question.Choices[2].Id)">Choice 3</option>
+                <option value="@(question.Choices[3].Id)">Choice 4</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => SelectedChoiceId)" class="validation-message" />
+        </div>
+
+        <button type="submit">Edit Question</button>
+    </EditForm>
+}
+
+@code {
+    [Parameter]
+    public int QuestionId { get; set; }
+
+    private bool IsInitialized = false;
+
+    private const int NumberOfChoices = 4;
+
+    [Required(ErrorMessage = "Must Select The Correct Answer")]
+    private int SelectedChoiceId;
+
+    private Question question;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+        question = _dbContext.Questions
+            .Where(q => q.Id == QuestionId)
+            .Include(q => q.Choices)
+            .FirstOrDefault();
+        SelectedChoiceId = question.Choices[0].Id;
+        IsInitialized = true;
+    }
+
+    private async Task Edit()
+    {
+        IsInitialized = false;
+
+        var _dbContext = new ExamBoardContext();
+
+        var oldCorrectChoice = question.Choices
+        .FirstOrDefault(c => c.IsCorrect == true && c.QuestionId == QuestionId);
+        oldCorrectChoice.IsCorrect = false;
+
+        var correctChoice = question.Choices.FirstOrDefault(c => c.Id == SelectedChoiceId);
+
+        if (correctChoice != null)
+        {
+            correctChoice.IsCorrect = true;
+        }
+
+        _dbContext.Update(question);
+
+        await _dbContext.SaveChangesAsync();
+
+        NavigationManager.NavigateTo("/questions");
+    }
+}

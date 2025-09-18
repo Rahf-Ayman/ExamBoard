@@ -1,0 +1,56 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+@if (IsStarted)
+{
+    <div class="home-welcome">
+        <h1>Welcome to ExamBoard</h1>
+        <p>Manage students, generate exams, and track results efficiently.</p>
+    </div>
+
+    <div class="dashboard-cards">
+        <div class="card card-stat">
+            <h5>Total Students</h5>
+            <p>@students.Count()</p>
+        </div>
+        <div class="card card-stat">
+            <h5>Total Exams</h5>
+            <p>@exams.Count()</p>
+        </div>
+        <div class="card card-stat">
+            <h5>Completed Exams</h5>
+            <p>@exams.Count(e => e.isCompleted)</p>
+        </div>
+        <div class="card card-stat">
+            <h5>Pending Exams</h5>
+            <p>@exams.Count(e => !e.isCompleted)</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+
+
+@code{
+    private List<Student> students = new();
+    private List<Exam> exams = new();
+    private int StudentCount;
+
+    private bool IsStarted = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+        students = await  _dbContext.Students.ToListAsync();
+        
+        exams = await _dbContext.Exams.ToListAsync();
+        IsStarted = true;
+
+    }
+}

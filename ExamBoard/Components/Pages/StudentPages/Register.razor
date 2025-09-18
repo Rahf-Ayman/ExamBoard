@@ -1,0 +1,132 @@
+﻿@page "/register"
+
+
+<PageTitle>Register</PageTitle>
+
+
+@if(IsInitialized){
+
+    <div class="register-container">
+        <h3 class="register-title">Register</h3>
+
+        @if (!string.IsNullOrEmpty(FlashMessage))
+        {
+            <div class="alert @FlashMessageCss" role="alert">
+                @FlashMessage
+            </div>
+        }
+
+        <EditForm Model="student" OnValidSubmit="Submit">
+            <DataAnnotationsValidator />
+
+            <div class="mb-3">
+                <label for="name" class="form-label">Name</label>
+                <InputText class="form-control" id="name" @bind-Value="student.Name" />
+                <ValidationMessage For="@(() => student.Name)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="age" class="form-label">Age</label>
+                <InputNumber class="form-control" id="age" @bind-Value="student.Age" />
+                <ValidationMessage For="@(() => student.Age)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="gender" class="form-label">Gender</label>
+                <InputSelect class="form-select form-select-sm" id="gender" @bind-Value="student.gender">
+                    <option selected value="@Gender.Male">Male</option>
+                    <option value="@Gender.Female">Female</option>
+                </InputSelect>
+                <ValidationMessage For="@(() => student.gender)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label">Email</label>
+                <InputText class="form-control" id="email" @bind-Value="student.Email" type="email" />
+                <ValidationMessage For="@(() => student.Email)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <InputText class="form-control" id="password" @bind-Value="student.Password" type="password" />
+                <ValidationMessage For="@(() => student.Password)" />
+            </div>
+
+            <div class="mb-3">
+                <label for="passwordc" class="form-label">Confirm Password</label>
+                <InputText class="form-control" id="passwordc" @bind-Value="ConfirmPassword" type="password" />
+                @if (!string.IsNullOrEmpty(PasswordError))
+                {
+                    <div class="validation-message">@PasswordError</div>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-register">Submit</button>
+        </EditForm>
+    </div>
+}
+else
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+
+
+@code {
+    private Student student = new();
+    private bool IsInitialized = true;
+
+    private string ConfirmPassword;
+
+    private string PasswordError;
+
+    private string FlashMessage;
+    private string FlashMessageCss;
+
+    private void Submit()
+
+    {
+        IsInitialized = false;
+        StateHasChanged();
+        FlashMessage = string.Empty;
+        FlashMessageCss = string.Empty;
+        PasswordError = string.Empty;
+
+        if (student.Password != ConfirmPassword)
+        {
+            PasswordError = "Passwords do not match!";
+            IsInitialized = true;
+            StateHasChanged();
+            return;
+        }
+
+        Add();
+    }
+
+
+    private async Task Add()
+    {
+        var _dbContext = new ExamBoardContext();
+        if(_dbContext.Students.Any(s => s.Email == student.Email))
+        {
+            FlashMessage = "Email already exists!";
+            FlashMessageCss = "alert-danger";
+            IsInitialized = true;
+            StateHasChanged();
+            return;
+        }
+        await _dbContext.Students.AddAsync(student);
+        await _dbContext.SaveChangesAsync();
+
+        student = new();
+        ConfirmPassword = string.Empty;
+        FlashMessage = "Registered Successfully!";
+        FlashMessageCss = "alert-success";
+        IsInitialized = true;
+
+        StateHasChanged();
+       
+    }
+}

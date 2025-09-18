@@ -1,0 +1,128 @@
+﻿@page "/questions/add"
+
+<PageTitle>Add Questions</PageTitle>
+
+<CustomNavbar page="questions" pageName="Question" />
+
+@if (!IsInitialized)
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+else
+{
+
+    <h3>Add Question</h3>
+
+    @if (!string.IsNullOrEmpty(FlashMessage))
+    {
+        <div class="alert @FlashMessageCss flash-message" role="alert">
+            @FlashMessage
+        </div>
+    }
+
+    <EditForm Model="question" OnValidSubmit="Add" class="edit-form">
+        <DataAnnotationsValidator />
+
+        <div class="mb-3">
+            <label for="text" class="form-label">Question</label>
+            <InputTextArea class="form-control" id="text" placeholder="Enter your question..." @bind-Value="question.Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice1" class="form-label">Choice 1</label>
+            <InputText class="form-control" id="choice1" @bind-Value="question.Choices[0].Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice2" class="form-label">Choice 2</label>
+            <InputText class="form-control" id="choice2" @bind-Value="question.Choices[1].Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice3" class="form-label">Choice 3</label>
+            <InputText class="form-control" id="choice3" @bind-Value="question.Choices[2].Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="choice4" class="form-label">Choice 4</label>
+            <InputText class="form-control" id="choice4" @bind-Value="question.Choices[3].Text" />
+            <ValidationMessage For="@(() => question.Text)" class="validation-message" />
+        </div>
+
+        <div class="mb-3">
+            <label for="select" class="form-label">The Correct Choice</label>
+            <InputSelect class="form-select form-select-sm" id="select" @bind-Value="SelectedChoiceId">
+                <option value="@(0)">Choice 1</option>
+                <option value="@(1)">Choice 2</option>
+                <option value="@(2)">Choice 3</option>
+                <option value="@(3)">Choice 4</option>
+            </InputSelect>
+            <ValidationMessage For="@(() => SelectedChoiceId)" class="validation-message" />
+        </div>
+
+        <button type="submit">Add Question</button>
+    </EditForm>
+
+}
+
+
+
+@code {
+    private bool IsInitialized = false;
+
+    private const int NumberOfChoices = 4;
+
+    private Question question = new();
+
+    private string FlashMessage;
+    private string FlashMessageCss;
+
+    [Required(ErrorMessage ="Must Select The Correct Answer")]
+    private int SelectedChoiceId = 0;
+
+    protected override async Task  OnInitializedAsync ()
+    {
+
+        for (int i = 0; i < NumberOfChoices; i++)
+        {
+            var qChoice = new Choice();
+            qChoice.QuestionId = question.Id;
+            qChoice.Question = question;
+            question.Choices.Add(qChoice);
+        }     
+        IsInitialized = true;
+    }
+
+    private async Task  Add()
+    {
+        IsInitialized = false;
+
+        var _dbContext = new ExamBoardContext();
+        if (question == null) return;
+
+        
+
+        var correctChoice = question.Choices[SelectedChoiceId];
+
+        if (correctChoice != null)
+        {
+            correctChoice.IsCorrect = true;
+        }
+
+        await _dbContext.AddAsync(question);
+        await _dbContext.SaveChangesAsync();
+
+        question = new();
+        await OnInitializedAsync();
+
+        FlashMessage = "Question Added Successfully !";
+        FlashMessageCss = "alert-success";
+    }
+}

@@ -1,0 +1,116 @@
+﻿@page "/exams/add"
+
+@inject NavigationManager Navigation
+
+<PageTitle>Add Exam</PageTitle>
+
+<ExamNav page="exams" pageName="Exam" StudentId="@(StudentId)" />
+
+
+@if (!string.IsNullOrEmpty(FlashMessage))
+{
+    <div class="alert @FlashMessageCss" role="alert">
+        @FlashMessage
+    </div>
+}
+<div class="generate-exam-page">
+    <div class="student-info">
+        <h3>Student Name: @student.Name</h3>
+        <h3>Student Age: @student.Age</h3>
+    </div>
+    <EditForm Model="exam" OnValidSubmit="Generate">
+        <DataAnnotationsValidator />
+
+        <div class="form-card">
+            <h3 class="page-title">Add Exam</h3>
+
+            <div class="mb-3">
+                <label for="numberOfQuestions" class="form-label">Number Of Questions</label>
+                <InputNumber type="number" class="form-control custom-input"
+                             id="numberOfQuestions"
+                             placeholder="Enter number of questions..."
+                             @bind-Value="numberOfQuestions" />
+                @if (!string.IsNullOrEmpty(Error))
+                {
+                    <div class="form-error">@Error</div>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-generate">
+                <i class="bi bi-lightning-charge"></i> Add Exam
+            </button>
+        </div>
+    </EditForm>
+</div>
+
+
+@code {
+    private Exam exam = new ();
+    private Student student = new();
+
+    private string FlashMessage;
+    private string FlashMessageCss;
+
+    [SupplyParameterFromQuery]
+    public int StudentId { get; set; }
+
+    private string Error;
+
+    private int numberOfQuestions ;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+        student = await _dbContext.Students.FindAsync(StudentId);
+    }
+
+    public void Generate()
+    {
+        Error = string.Empty;
+
+        if (numberOfQuestions <= 0 || numberOfQuestions > 10)
+        {
+            Error = "Number of Questions must be between 1 and 10";
+            return;
+        }
+
+        var _dbContext = new ExamBoardContext();
+        exam.StudentId = StudentId;
+        exam.examQuestions = FetchRandomQuestions(numberOfQuestions);
+        exam.NumberOfQuestions = numberOfQuestions;
+        if(exam.examQuestions == null)
+        {
+            return;
+        }
+        _dbContext.Add(exam);
+        _dbContext.SaveChanges();
+
+        Navigation.NavigateTo($"/exams/{exam.Id}");
+    }
+
+    public ICollection<ExamQuestion> FetchRandomQuestions(int count)
+    {
+        var _dbContext = new ExamBoardContext();
+        var Questions = _dbContext.Questions
+            .ToList();
+
+        if(count > Questions.Count)
+        {
+            FlashMessage = $"There is Only {Questions.Count} available questions.";
+            FlashMessageCss = "alert-danger";
+
+            StateHasChanged();
+            return null;
+        }
+        else
+        {
+            return Questions
+                .OrderBy(r => r.RandomFlag)
+                .Select(q => new ExamQuestion { QuestionId = q.Id })
+                .Take(count)
+                .ToList();
+        }
+
+    }
+
+}

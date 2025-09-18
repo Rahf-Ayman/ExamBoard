@@ -1,0 +1,89 @@
+﻿@page "/exams/{ExamId:int}"
+
+@inject NavigationManager Navigation
+
+<PageTitle>Show Exam</PageTitle>
+
+<div class="show-exam-page">
+    <div class="student-info">
+        <h3>Student Name: @exam.Student.Name</h3>
+        <h3>Student Age: @exam.Student.Age</h3>
+    </div>
+
+    <EditForm Model="exam" OnValidSubmit="Submit">
+        <DataAnnotationsValidator />
+        @foreach (var question in exam.examQuestions)
+        {
+            <fieldset class="row mb-3">
+                <legend>@question.Question.Text</legend>
+                <div>
+                    <InputRadioGroup @bind-Value="question.ChoiceId" Name="@($"question{question.Question.Id}")" required>
+                        @foreach (var choice in question.Question.Choices)
+                        {
+                            <div class="form-check">
+                                <InputRadio class="form-check-input"
+                                            Value="@choice.Id"
+                                            id="@($"gridRadios{choice.Id}_{question.Question.Id}")" />
+                                <label class="form-check-label"
+                                       for="@($"gridRadios{choice.Id}_{question.Question.Id}")">
+                                    @choice.Text
+                                </label>
+                            </div>
+                        }
+                    </InputRadioGroup>
+                    @if (question.ChoiceId == 0)
+                    {
+                        isError = true;
+                        <div class="text-danger">Please select a choice.</div>
+                    }
+                </div>
+            </fieldset>
+        }
+
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </EditForm>
+</div>
+
+
+
+
+@code {
+    private Exam exam = new();
+
+    private bool isError = false;
+
+    [Parameter]
+    public int ExamId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var _dbContext = new ExamBoardContext();
+        exam =  _dbContext.Exams
+            .Where(e => e.Id == ExamId)
+            .Include(e => e.examQuestions)
+            .FirstOrDefault();
+
+    }
+
+    private void Submit()
+    {
+        isError = false;
+
+        var unanswered = exam.examQuestions
+            .Where(q => q.ChoiceId == 0)
+            .ToList();
+
+        if (unanswered.Any())
+        {
+            isError = true;
+            return;
+        }
+        var _dbContext = new ExamBoardContext();
+        exam.isCompleted = true;
+        _dbContext.Update(exam);
+        _dbContext.SaveChanges();
+
+        Navigation.NavigateTo($"/exams/{exam.Id}/result");
+    }
+}

@@ -1,0 +1,104 @@
+﻿@page "/exams/{ExamId:int}/result"
+
+<PageTitle>Show Exam Result</PageTitle>
+
+@if (isInitialized)
+{
+
+        @if (exam.examQuestions.Count() == 0)
+        {
+            <h4 class="no-exam">this exam is deleted</h4>
+        }
+        else
+        {
+        <div class="show-exam-result">
+            <h3>Student Name: @exam.Student.Name</h3>
+            <h3>Student Age: @exam.Student.Age</h3>
+            <h6>Student Result: @($"{Score} / {exam.NumberOfQuestions}")</h6>
+
+            @foreach (var question in exam.examQuestions)
+            {
+                <fieldset class="row mb-3">
+                    <legend class="col-form-label col-sm-2 pt-0">@question.Question.Text</legend>
+                    <div class="col-sm-10">
+                        <InputRadioGroup @bind-Value="question.ChoiceId" Name="@($"question{question.Question.Id}")">
+                            @foreach (var choice in question.Question.Choices)
+                            {
+                                var isSelected = choice.Id == question.ChoiceId;
+                                var alertClass = !choice.IsCorrect
+                                ? (isSelected ? "alert alert-danger" : "alert alert-light")
+                                : "alert alert-success";
+
+                                <div class="@alertClass d-flex align-items-center mb-2 p-2 rounded">
+                                    <InputRadio class="form-check-input me-2" Value="@choice.Id" id="@($"gridRadios{choice.Id}_{question.Question.Id}")" disabled />
+                                    <label class="form-check-label mb-0" for="@($"gridRadios{choice.Id}_{question.Question.Id}")">
+                                        @choice.Text
+                                    </label>
+                                </div>
+                            }
+                        </InputRadioGroup>
+                    </div>
+                </fieldset>
+            }
+
+            <a class="btn btn-secondary" href="@($"/exams?StudentId={exam.Student.Id}")">Back</a>
+             </div>
+        }
+
+       
+   
+
+
+}
+else
+{
+    <div class="loading-container">
+        <h5 class="loading-text">..Loading</h5>
+        <div class="spinner"></div>
+    </div>
+}
+
+
+@code {
+    private bool isInitialized = false;
+    private Exam exam = new();
+
+    private int Score ;
+
+    [Parameter]
+    public int ExamId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var _dbContext = new ExamBoardContext();
+        exam = _dbContext.Exams
+            .Where(e => e.Id == ExamId)
+            .Include(e => e.examQuestions)
+            .FirstOrDefault();
+        
+        if (exam.examQuestions.Count() == 0)
+        {
+            _dbContext.Exams.Remove(exam);
+            _dbContext.SaveChanges();
+            exam = new();
+            isInitialized = true;
+            return;
+        }
+        foreach (var examQuestion in exam.examQuestions)
+        {
+            foreach (var choice in examQuestion.Question.Choices)
+            {
+                if (choice.IsCorrect && examQuestion.ChoiceId == choice.Id)
+                {
+                    Score++;
+                }
+            }
+        }
+        exam.Score = Score;
+        _dbContext.Update(exam);
+        await _dbContext.SaveChangesAsync();
+
+        isInitialized = true;
+    }
+
+}
